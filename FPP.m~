@@ -1,0 +1,127 @@
+% First passage probability
+
+% We intend to plot the first passage probabilities of a population of
+% particles. 
+
+% The run-lengths from our experience are exponentially distributed. We
+% have to include pauses as well. So each iteration of the run loop, could
+% be either stationary or moving. 
+
+% If it is moving - then the runlength should be obtained from an
+% exponential distribution. It should be stationary 80 % of the time.
+
+
+% numpart is number of particle
+% frames is number of movements observed
+% lambda is the mean run length/time from an exponential distribution 
+% f is fraction of time spent in stationary state 
+% k is the vector with lengths at which we want to find FPP. 
+
+function [FPP,E,D,R] = FPP(numpart,frames,lambda,f,k)
+
+
+for i = 1:numpart % For 1000 particles 
+    
+        D(1,i) = 0;
+
+    for j = 1:frames % This is a sequence of 1000 time points. 
+
+        % Next we generate run times from an exponential distribution
+        
+        r = rand;  
+        
+        if r > f % This is to see that 100*f of the time is spent in stationary state 
+            
+            c = rand;
+
+            R(j,i) = (1/(lambda)) * log(1/(1-c)) ; % This is the length of the run. tau is the mean run length from an exponential 
+                                                % distribution
+            
+            % However this displacement could be plus or minus end
+            % directed. 
+            
+            z = rand;
+            
+            if z > 0.5 % Equal probability of minus and plus end runs
+                
+               R(j,i) = -R(j,i);
+               
+            end
+               
+        
+        else 
+            
+            R(j,i) = 0; % So R(j,i) = 0 for 100* (1-f) % of the time. This represents the total time for which motors are
+                        %  associated with the cargo. In a way, abundance
+                        %  of motors. 
+            
+        end
+        
+        % Next we increment the displacement of the particle with each run
+  
+        D(j+1,i) = D(j,i) + R(j,i);
+        
+    end 
+            
+            
+end
+
+% Next we try to find the FPP. 
+
+
+[m,n] = size(D); % Get the size of the displacement matrix. To make life easy. 
+
+maximum = k(end); % To use later
+
+
+
+for i = 1:n % The first loop runs over all the particles
+
+for w = 1:length(k) % This one is for each particle trajectory. 
+
+     
+    q = find((D(:,i)) >= k(w)); % Find all the time points at which the particle's position is greater than k(w);
+                                % Only in one direction though.  
+
+                          
+    t = isempty(q); % q could be empty if the particle never reached that l.
+                    % Moreover, q could be multiple time points. 
+                    % But we want to find the first time. 
+    
+    if t == 0
+
+       FP(w,i) = 0.1*(q(1)); % 0.1 is converting frames to time
+
+    else 
+
+       FP(w,i) = (0); % if q is empty we assign it zero value. Can be removed later. 
+       
+    end
+
+end 
+
+end % end of loop to find the first time points at which positions defined in k are reached. 
+
+minimum = 0.1; space = 0.5; BinEdges = [minimum:space:maximum]; % For the histogram counts
+
+e = [(minimum + space/2) : space : (maximum-space/2)];
+
+% The next loop calculates actual FPPs.
+
+for i = 1:length(k) % The different length scales at which we want FPP
+
+    Y  = FP(i,:);
+
+    FPtimes{i} = Y(find(Y>0)); % Removing zero values. 
+
+    [DistFPtimes{i},BinEdges] = histcounts(FPtimes{i},BinEdges); % counting the number of elements in each bin 
+
+   FPP{i} = DistFPtimes{i}/length(FPtimes{i}); % Normalization 
+     
+    isNZ = ( FPP{i} > 0);  FPP{i} = FPP{i}(isNZ); E{i} = e(isNZ); % This is to remove bins with zero values. 
+    
+end
+
+end
+
+    
